@@ -33,7 +33,7 @@ all the zones the plugin should be authoritative for.
 kubernetes [ZONES...] {
     endpoint URL
     tls CERT KEY CACERT
-    kubeconfig KUBECONFIG CONTEXT
+    kubeconfig KUBECONFIG [CONTEXT]
     namespaces NAMESPACE...
     labels EXPRESSION
     pods POD-MODE
@@ -49,7 +49,10 @@ kubernetes [ZONES...] {
    If omitted, it will connect to k8s in-cluster using the cluster service account.
 * `tls` **CERT** **KEY** **CACERT** are the TLS cert, key and the CA cert file names for remote k8s connection.
    This option is ignored if connecting in-cluster (i.e. endpoint is not specified).
-* `kubeconfig` **KUBECONFIG** **CONTEXT** authenticates the connection to a remote k8s cluster using a kubeconfig file. It supports TLS, username and password, or token-based authentication. This option is ignored if connecting in-cluster (i.e., the endpoint is not specified).
+* `kubeconfig` **KUBECONFIG [CONTEXT]** authenticates the connection to a remote k8s cluster using a kubeconfig file.
+   **[CONTEXT]** is optional, if not set, then the current context specified in kubeconfig will be used.
+   It supports TLS, username and password, or token-based authentication.
+   This option is ignored if connecting in-cluster (i.e., the endpoint is not specified).
 * `namespaces` **NAMESPACE [NAMESPACE...]** only exposes the k8s namespaces listed.
    If this option is omitted all namespaces are exposed
 * `namespace_labels` **EXPRESSION** only expose the records for Kubernetes namespaces that match this label selector.
@@ -100,6 +103,20 @@ kubernetes [ZONES...] {
   The search path could, for example, include another Kubernetes cluster.
 
 Enabling zone transfer is done by using the *transfer* plugin.
+
+## Startup
+
+When CoreDNS starts with the *kubernetes* plugin enabled, it will delay serving DNS for up to 5 seconds
+until it can connect to the Kubernetes API and synchronize all object watches.  If this cannot happen within
+5 seconds, then CoreDNS will start serving DNS while the *kubernetes* plugin continues to try to connect
+and synchronize all object watches.  CoreDNS will answer SERVFAIL to any request made for a Kubernetes record
+that has not yet been synchronized.
+
+## Monitoring Kubernetes Endpoints
+
+By default the *kubernetes* plugin watches Endpoints via the `discovery.EndpointSlices` API.  However the
+`api.Endpoints` API is used instead if the Kubernetes version does not support the `EndpointSliceProxying`
+feature gate by default (i.e. Kubernetes version < 1.19).
 
 ## Ready
 
